@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
+  presets: [require('nativewind/preset')],
+  // Required for NativeWind colorScheme.set / Profile appearance toggle
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -20,8 +23,8 @@ module.exports = {
         }
       },
       fontFamily: {
-        display: ['Fraunces', 'serif'],
-        body: ['Inter', 'sans-serif'],
+        display: ['Fraunces_600SemiBold', 'Fraunces_500Medium', 'serif'],
+        body: ['Inter_400Regular', 'Inter_500Medium', 'Inter_600SemiBold', 'sans-serif'],
       },
       spacing: {
         '1': '4px',

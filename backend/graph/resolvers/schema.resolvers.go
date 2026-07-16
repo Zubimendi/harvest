@@ -250,18 +250,20 @@ func (r *Resolver) GetListing(ctx context.Context, id string) (*Listing, error) 
 		}
 	}
 
-	// Attach conversation if one exists for this listing and the caller is a participant
+	// Attach conversation if one exists for this listing and the caller is a participant.
+	// Do NOT nest Listing back onto Conversation — that creates a JSON cycle and
+	// encoding fails with an empty body (Apollo: "Unexpected end of input").
 	if callerID != nil {
-		conv := &Conversation{}
+		var convID string
 		err := r.Pool.QueryRow(ctx, `
 			SELECT c.id FROM public.conversations c
 			JOIN public.conversation_participants cp ON cp.conversation_id = c.id
 			WHERE c.listing_id = $1 AND cp.user_id = $2
+			ORDER BY c.created_at DESC
 			LIMIT 1
-		`, id, *callerID).Scan(&conv.ID)
+		`, id, *callerID).Scan(&convID)
 		if err == nil {
-			conv.Listing = l
-			l.Conversation = conv
+			l.Conversation = &Conversation{ID: convID}
 		}
 	}
 
@@ -314,12 +316,17 @@ func (r *Resolver) MyConversations(ctx context.Context) ([]*Conversation, error)
 	if err != nil {
 		return nil, fmt.Errorf("myConversations: %w", err)
 	}
-	defer rows.Close()
 
-	var conversations []*Conversation
+	// Materialize first — do not nest queries while the outer rows hold a pool conn
+	// (pgxpool deadlock → Inbox/Browse hang forever).
+	type convRow struct {
+		conv    *Conversation
+		listing *Listing
+	}
+	var pending []convRow
 	for rows.Next() {
-		conv := &Conversation{}
-		listing := &Listing{DisplayLocation: Location{}}
+		conv := &Conversation{Participants: []*User{}, Messages: []*Message{}}
+		listing := &Listing{DisplayLocation: Location{}, Photos: []string{}}
 		var listingID string
 		var convCreatedAt time.Time
 
@@ -333,8 +340,17 @@ func (r *Resolver) MyConversations(ctx context.Context) ([]*Conversation, error)
 			continue
 		}
 		conv.Listing = listing
+		pending = append(pending, convRow{conv: conv, listing: listing})
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("myConversations rows: %w", err)
+	}
 
-		// Fetch participants
+	conversations := make([]*Conversation, 0, len(pending))
+	for _, item := range pending {
+		conv := item.conv
+
 		pRows, err := r.Pool.Query(ctx, `
 			SELECT u.id, u.display_name, u.avatar_url
 			FROM public.conversation_participants cp
@@ -344,13 +360,13 @@ func (r *Resolver) MyConversations(ctx context.Context) ([]*Conversation, error)
 		if err == nil {
 			for pRows.Next() {
 				p := &User{}
-				pRows.Scan(&p.ID, &p.DisplayName, &p.AvatarURL)
-				conv.Participants = append(conv.Participants, p)
+				if scanErr := pRows.Scan(&p.ID, &p.DisplayName, &p.AvatarURL); scanErr == nil {
+					conv.Participants = append(conv.Participants, p)
+				}
 			}
 			pRows.Close()
 		}
 
-		// Fetch last message for preview
 		lastMsg := &Message{Sender: &User{}}
 		err = r.Pool.QueryRow(ctx, `
 			SELECT m.id, m.body, m.created_at, u.id, u.display_name
@@ -418,6 +434,9 @@ func (r *Resolver) ConversationMessages(ctx context.Context, conversationID stri
 		messages = append(messages, msg)
 	}
 
+	if messages == nil {
+		messages = []*Message{}
+	}
 	return messages, nil
 }
 

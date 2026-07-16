@@ -11,19 +11,19 @@ export function Badge({ label, variant = 'default' }: BadgeProps) {
 
   switch (variant) {
     case 'success':
-      bgClass = 'bg-accent-sage dark:bg-accent-sage-dark opacity-20';
+      bgClass = 'bg-[#6B8F71]/20';
       textClass = 'text-accent-sage dark:text-accent-sage-dark';
       break;
     case 'warning':
-      bgClass = 'bg-accent-amber dark:bg-accent-amber-dark opacity-20';
+      bgClass = 'bg-[#D68C2A]/20';
       textClass = 'text-accent-amber dark:text-accent-amber-dark';
       break;
     case 'error':
-      bgClass = 'bg-accent-error dark:bg-accent-error-dark opacity-20';
+      bgClass = 'bg-[#B3462C]/20';
       textClass = 'text-accent-error dark:text-accent-error-dark';
       break;
     case 'info':
-      bgClass = 'bg-accent-info opacity-20';
+      bgClass = 'bg-[#7A93A3]/20';
       textClass = 'text-accent-info';
       break;
   }

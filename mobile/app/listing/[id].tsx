@@ -4,15 +4,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Clock, MapPin, User as UserIcon, Flag } from 'lucide-react-native';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { LISTING_DETAIL_QUERY, RESERVE_LISTING_MUTATION, CANCEL_RESERVATION_MUTATION, CONFIRM_PICKUP_MUTATION, SUBMIT_REVIEW_MUTATION } from '../../lib/graphql/queries';
 import { useAuth } from '../../lib/auth';
 import { useLocation } from '../../hooks/useLocation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { RatingPrompt } from '../../components/RatingPrompt';
+import { showErrorAlert } from '../../lib/errors';
+import { ensureAuthTokenLoaded, getAuthToken } from '../../lib/apollo';
 
 export default function ListingDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const params = useLocalSearchParams<{ id: string | string[] }>();
+  const id = useMemo(() => {
+    const raw = params.id;
+    return Array.isArray(raw) ? raw[0] : raw;
+  }, [params.id]);
   const router = useRouter();
   const { user } = useAuth();
   const { location } = useLocation();
@@ -21,22 +27,35 @@ export default function ListingDetailScreen() {
 
   const { data, loading, error, refetch } = useQuery(LISTING_DETAIL_QUERY, {
     variables: { id },
+    skip: !id,
     fetchPolicy: 'cache-and-network',
   });
 
   const [reserveListing, { loading: reserving }] = useMutation(RESERVE_LISTING_MUTATION, {
-    onCompleted: () => refetch(),
-    onError: (err) => Alert.alert('Error', err.message),
+    onCompleted: (result) => {
+      refetch();
+      const convId = (result as { reserveListing?: { conversation?: { id?: string } } })
+        ?.reserveListing?.conversation?.id;
+      if (convId) {
+        Alert.alert('Reserved!', 'Chat with the neighbor to arrange pickup.', [
+          { text: 'Later', style: 'cancel' },
+          { text: 'Open chat', onPress: () => router.push(`/conversation/${convId}`) },
+        ]);
+      } else {
+        Alert.alert('Reserved!', 'This listing is held for you.');
+      }
+    },
+    onError: (err) => showErrorAlert('Couldn’t reserve', err, 'Listing may already be reserved or unavailable.'),
   });
 
   const [cancelReservation, { loading: canceling }] = useMutation(CANCEL_RESERVATION_MUTATION, {
     onCompleted: () => refetch(),
-    onError: (err) => Alert.alert('Error', err.message),
+    onError: (err) => showErrorAlert('Couldn’t cancel', err),
   });
 
   const [confirmPickup, { loading: confirming }] = useMutation(CONFIRM_PICKUP_MUTATION, {
     onCompleted: () => setShowRating(true),
-    onError: (err) => Alert.alert('Error', err.message),
+    onError: (err) => showErrorAlert('Couldn’t confirm pickup', err),
   });
 
   const [submitReview] = useMutation(SUBMIT_REVIEW_MUTATION, {
@@ -44,7 +63,7 @@ export default function ListingDetailScreen() {
       setShowRating(false);
       refetch();
     },
-    onError: (err) => Alert.alert('Error', err.message),
+    onError: (err) => showErrorAlert('Couldn’t submit review', err),
   });
 
   if (loading && !data) {
@@ -87,12 +106,26 @@ export default function ListingDetailScreen() {
   };
 
   const handleReserve = () => {
+    if (isOwner) {
+      Alert.alert('Your listing', "You can’t reserve your own listing. Try one from Maya or Green Grocer.");
+      return;
+    }
     Alert.alert(
       'Confirm Reservation',
       'Are you sure you can pick this up before the window ends?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reserve', onPress: () => reserveListing({ variables: { id } }) }
+        {
+          text: 'Reserve',
+          onPress: async () => {
+            await ensureAuthTokenLoaded();
+            if (!getAuthToken()) {
+              showErrorAlert('Couldn’t reserve', 'You’re not signed in. Go back and continue as demo neighbor.');
+              return;
+            }
+            reserveListing({ variables: { id } });
+          },
+        },
       ]
     );
   };
@@ -193,7 +226,12 @@ export default function ListingDetailScreen() {
         )}
         
         {listing.status === 'ACTIVE' && isOwner && (
-          <Button label="Your Listing is Active" variant="secondary" disabled />
+          <View>
+            <Button label="You can’t reserve your own listing" variant="secondary" disabled />
+            <Text className="font-body text-xs text-text-secondary text-center mt-2">
+              Open a listing from Maya Baker or Green Grocer to try reserve + chat.
+            </Text>
+          </View>
         )}
 
         {listing.status === 'RESERVED' && isReserver && (

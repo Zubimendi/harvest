@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, User as UserIcon, Star, Flag } from 'lucide-react-native';
 import { Badge } from '../../components/ui/Badge';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { PUBLIC_PROFILE_QUERY, REPORT_USER_MUTATION } from '../../lib/graphql/queries';
 import { useState } from 'react';
 import { ReportSheet } from '../../components/ReportSheet';

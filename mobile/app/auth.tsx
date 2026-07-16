@@ -1,40 +1,54 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
 import { Button } from '../components/ui/Button';
 
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'email' | 'otp' | 'profile'>('email');
+  const [step, setStep] = useState<'email' | 'otp'>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { signInAsDemo } = useAuth();
+
+  const handleDemo = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await signInAsDemo();
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not start demo session');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSendOtp = async () => {
+    if (!isSupabaseConfigured) {
+      setError('Email sign-in isn’t configured. Use demo neighbor for now.');
+      return;
+    }
     if (!email) {
       setError('Please enter an email address');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        shouldCreateUser: true,
-      },
+      options: { shouldCreateUser: true },
     });
 
     setLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      setStep('otp');
-    }
+    if (error) setError(error.message);
+    else setStep('otp');
   };
 
   const handleVerifyOtp = async () => {
@@ -49,56 +63,71 @@ export default function AuthScreen() {
     const { data, error } = await supabase.auth.verifyOtp({
       email,
       token: otp,
-      type: 'magiclink',
+      type: 'email',
     });
 
     setLoading(false);
-    if (error) {
-      setError(error.message);
-    } else if (data.session) {
-      // Check if user has a profile record. If new, they might need to set one up.
-      // For MVP, we'll route to tabs if successful, or we could add a profile step here.
-      // We will assume that if we get here, we are good to go to tabs, and users can edit profile later.
-      router.replace('/(tabs)');
-    }
+    if (error) setError(error.message);
+    else if (data.session) router.replace('/(tabs)');
   };
 
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center' }}>
-          
-          <View className="mb-12">
-            <Text className="font-display text-4xl text-brand dark:text-brand-dark mb-2">
-              Harvest
-            </Text>
+          <View className="mb-10">
+            <View className="flex-row items-center mb-6">
+              <Image
+                source={require('../assets/logo.png')}
+                accessibilityLabel="Harvest"
+                className="w-12 h-12 mr-3"
+                resizeMode="contain"
+              />
+              <Text className="font-display text-4xl text-brand dark:text-brand-dark">
+                Harvest
+              </Text>
+            </View>
             <Text className="font-display text-2xl text-text-primary dark:text-text-primary-dark">
-              {step === 'email' ? "Let's get started" : "Check your email"}
+              {step === 'email' ? "Join your neighborhood" : 'Check your email'}
             </Text>
-            <Text className="font-body text-text-secondary dark:text-text-secondary-dark mt-2">
-              {step === 'email' 
-                ? "Enter your email to sign in or create an account. No passwords needed." 
+            <Text className="font-body text-text-secondary dark:text-text-secondary-dark mt-2 leading-6">
+              {step === 'email'
+                ? 'Share surplus food with people nearby. Continue as a demo neighbor to explore, or sign in with email.'
                 : `We sent a 6-digit code to ${email}`}
             </Text>
           </View>
 
           {error && (
-            <View className="bg-accent-error/20 p-3 rounded-lg mb-6 border border-accent-error/30">
+            <View className="bg-accent-error/10 p-3 rounded-input mb-6 border border-accent-error/30">
               <Text className="text-accent-error dark:text-accent-error-dark font-body">{error}</Text>
             </View>
           )}
 
           {step === 'email' ? (
             <View className="gap-y-4">
+              <Button
+                label={loading ? 'Starting…' : 'Continue as demo neighbor'}
+                onPress={handleDemo}
+                disabled={loading}
+              />
+
+              <View className="flex-row items-center my-2">
+                <View className="flex-1 h-px bg-border dark:bg-border-dark" />
+                <Text className="mx-3 font-body text-xs uppercase tracking-wider text-text-secondary">
+                  or email
+                </Text>
+                <View className="flex-1 h-px bg-border dark:bg-border-dark" />
+              </View>
+
               <View>
                 <Text className="font-body font-bold text-text-primary dark:text-text-primary-dark mb-2">
                   Email
                 </Text>
                 <TextInput
-                  className="w-full bg-surface-alt dark:bg-surface-alt-dark rounded-input p-4 font-body text-text-primary dark:text-text-primary-dark"
+                  className="w-full bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-input p-4 font-body text-text-primary dark:text-text-primary-dark"
                   placeholder="hello@example.com"
                   placeholderTextColor="#B6A996"
                   keyboardType="email-address"
@@ -108,23 +137,24 @@ export default function AuthScreen() {
                   onChangeText={setEmail}
                 />
               </View>
-              <Button 
-                label={loading ? "Sending..." : "Continue"} 
-                onPress={handleSendOtp} 
+              <Button
+                label={loading ? 'Sending…' : 'Continue with email'}
+                variant="secondary"
+                onPress={handleSendOtp}
                 disabled={loading}
               />
-              <TouchableOpacity onPress={() => router.back()} className="mt-4 items-center">
-                 <Text className="font-body text-text-secondary dark:text-text-secondary-dark">Cancel</Text>
+              <TouchableOpacity onPress={() => router.back()} className="mt-2 items-center">
+                <Text className="font-body text-text-secondary dark:text-text-secondary-dark">Back</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View className="gap-y-4">
               <View>
                 <Text className="font-body font-bold text-text-primary dark:text-text-primary-dark mb-2">
-                  Login Code
+                  Login code
                 </Text>
                 <TextInput
-                  className="w-full bg-surface-alt dark:bg-surface-alt-dark rounded-input p-4 font-body text-text-primary dark:text-text-primary-dark text-xl tracking-widest text-center"
+                  className="w-full bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-input p-4 font-body text-text-primary dark:text-text-primary-dark text-xl tracking-widest text-center"
                   placeholder="123456"
                   placeholderTextColor="#B6A996"
                   keyboardType="number-pad"
@@ -133,17 +163,16 @@ export default function AuthScreen() {
                   onChangeText={setOtp}
                 />
               </View>
-              <Button 
-                label={loading ? "Verifying..." : "Verify & Sign In"} 
-                onPress={handleVerifyOtp} 
+              <Button
+                label={loading ? 'Verifying…' : 'Verify & sign in'}
+                onPress={handleVerifyOtp}
                 disabled={loading}
               />
-              <TouchableOpacity onPress={() => setStep('email')} className="mt-4 items-center">
-                 <Text className="font-body text-brand dark:text-brand-dark">Use a different email</Text>
+              <TouchableOpacity onPress={() => setStep('email')} className="mt-2 items-center">
+                <Text className="font-body text-brand dark:text-brand-dark">Use a different email</Text>
               </TouchableOpacity>
             </View>
           )}
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

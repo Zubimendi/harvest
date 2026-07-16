@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Appearance, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colorScheme } from 'nativewind';
 import { colors } from './tokens';
 
 type Theme = 'light' | 'dark' | 'system';
@@ -33,10 +34,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const nextDark =
+      theme === 'system' ? systemColorScheme === 'dark' : theme === 'dark';
+    setIsDark(nextDark);
+
+    // Drive NativeWind `dark:` variants (requires darkMode: 'class' in tailwind.config)
+    try {
+      colorScheme.set(theme);
+    } catch (e) {
+      console.warn('[theme] setColorScheme failed', e);
+    }
+
+    // Keep RN Appearance in sync for StatusBar / system components
     if (theme === 'system') {
-      setIsDark(systemColorScheme === 'dark');
+      Appearance.setColorScheme(null);
     } else {
-      setIsDark(theme === 'dark');
+      Appearance.setColorScheme(theme);
     }
   }, [theme, systemColorScheme]);
 
