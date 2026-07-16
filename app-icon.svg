@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background: warm cream, soft rounded square (adaptive-icon safe area friendly) -->
+  <rect width="512" height="512" rx="112" fill="#FBF6EF"/>
+
+  <!-- Basket handle: single warm terracotta arc -->
+  <path d="M 156 268 C 156 176 216 116 256 116 C 296 116 356 176 356 268"
+        fill="none" stroke="#C1502E" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- Basket body: rounded trapezoid, terracotta -->
+  <path d="M 132 268 L 380 268 L 356 388 C 354 400 344 408 332 408 L 180 408
+           C 168 408 158 400 156 388 L 132 268 Z"
+        fill="#C1502E"/>
+
+  <!-- Basket weave texture: three cream lines -->
+  <path d="M 150 300 L 362 300" stroke="#FBF6EF" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 156 340 L 356 340" stroke="#FBF6EF" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 164 380 L 348 380" stroke="#FBF6EF" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- Sprout emerging from basket: two sage leaves + stem -->
+  <path d="M 256 268 C 256 224 256 196 256 176" stroke="#6B8F71" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M 256 224 C 226 224 204 202 200 168 C 236 168 256 190 256 224 Z" fill="#6B8F71"/>
+  <path d="M 256 200 C 286 200 308 178 312 144 C 276 144 256 166 256 200 Z" fill="#8CAE8F"/>
+</svg>

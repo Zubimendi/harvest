@@ -1,0 +1,115 @@
+scalar Time
+
+type User {
+  id: ID!
+  displayName: String!
+  avatarUrl: String
+  bio: String
+  isBusiness: Boolean!
+  ratingAvg: Float!
+  ratingCount: Int!
+  createdAt: Time!
+}
+
+enum ListingCategory {
+  PRODUCE
+  BAKED_GOODS
+  PANTRY
+  COOKED_MEAL
+  DAIRY_EGGS
+  OTHER
+}
+
+enum ListingStatus {
+  ACTIVE
+  RESERVED
+  PICKED_UP
+  EXPIRED
+  CANCELLED
+}
+
+type Location {
+  latitude: Float!
+  longitude: Float!
+}
+
+type Listing {
+  id: ID!
+  owner: User!
+  title: String!
+  description: String
+  category: ListingCategory!
+  photos: [String!]!
+  quantity: String
+  suggestedDonation: String
+  status: ListingStatus!
+  pickupWindowStart: Time!
+  pickupWindowEnd: Time!
+  displayLocation: Location!
+  trueLocation: Location
+  reservedBy: User
+  conversation: Conversation
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+type Message {
+  id: ID!
+  sender: User!
+  body: String!
+  createdAt: Time!
+}
+
+type Conversation {
+  id: ID!
+  listing: Listing!
+  messages: [Message!]!
+  participants: [User!]!
+}
+
+enum ReportReason {
+  SPOILED_OR_UNSAFE
+  MISLEADING
+  NO_SHOW
+  INAPPROPRIATE
+  OTHER
+}
+
+type Query {
+  nearbyListings(latitude: Float!, longitude: Float!, radiusKm: Float!, category: ListingCategory): [Listing!]!
+  listing(id: ID!): Listing!
+  publicProfile(id: ID!): User!
+  myConversations: [Conversation!]!
+  conversationMessages(conversationId: ID!): [Message!]!
+}
+
+input CreateListingInput {
+  title: String!
+  description: String
+  category: ListingCategory!
+  photos: [String!]!
+  quantity: String
+  suggestedDonation: String
+  pickupWindowStart: Time!
+  pickupWindowEnd: Time!
+  latitude: Float!
+  longitude: Float!
+}
+
+type Mutation {
+  createListing(input: CreateListingInput!): Listing!
+  reserveListing(id: ID!): Listing!
+  cancelReservation(id: ID!): Listing!
+  confirmPickup(id: ID!): Listing!
+  
+  sendMessage(conversationId: ID!, body: String!): Message!
+  
+  submitReview(listingId: ID!, rating: Int!, comment: String): Boolean!
+  reportListing(listingId: ID!, reason: ReportReason!, details: String): Boolean!
+  reportUser(userId: ID!, reason: ReportReason!, details: String): Boolean!
+}
+
+type Subscription {
+  listingUpdated(id: ID!): Listing!
+  newMessage(conversationId: ID!): Message!
+}
