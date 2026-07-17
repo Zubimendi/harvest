@@ -47,6 +47,7 @@ function RootNavigation() {
         <Stack.Screen name="listing/[id]" />
         <Stack.Screen name="profile/[id]" />
         <Stack.Screen name="conversation/[id]" />
+        <Stack.Screen name="reservations" />
       </Stack>
     </View>
   );

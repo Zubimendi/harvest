@@ -22,7 +22,8 @@ on conflict (id) do update set
   bio = excluded.bio,
   is_business = excluded.is_business;
 
--- Clear prior demo listings (idempotent re-seed)
+-- Clear prior demo listings (idempotent re-seed).
+-- Cascades remove related conversations/messages for these listings.
 delete from public.listings
 where owner_id in (
   '22222222-2222-2222-2222-222222222222',
@@ -32,6 +33,7 @@ where owner_id in (
 
 -- Seed neighborhood: Lisbon Baixa-ish (override via EXPO_PUBLIC_SEED_LAT/LNG on mobile)
 -- Points are within ~1–2 km of 38.7223, -9.1393
+-- Pickup windows are generous (hours → end of day / tomorrow) so local demos survive overnight.
 
 insert into public.listings (
   id, owner_id, title, description, category, photos, quantity, suggested_donation,
@@ -48,7 +50,7 @@ insert into public.listings (
   null,
   'ACTIVE',
   now() - interval '1 hour',
-  now() + interval '5 hours',
+  now() + interval '36 hours',
   ST_SetSRID(ST_MakePoint(-9.1410, 38.7235), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1415, 38.7230), 4326)::geography
 ),
@@ -63,7 +65,7 @@ insert into public.listings (
   'Suggested €2',
   'ACTIVE',
   now() - interval '30 minutes',
-  now() + interval '3 hours',
+  now() + interval '24 hours',
   ST_SetSRID(ST_MakePoint(-9.1375, 38.7210), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1380, 38.7205), 4326)::geography
 ),
@@ -78,7 +80,7 @@ insert into public.listings (
   null,
   'ACTIVE',
   now(),
-  now() + interval '2 hours',
+  now() + interval '18 hours',
   ST_SetSRID(ST_MakePoint(-9.1440, 38.7250), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1435, 38.7246), 4326)::geography
 ),
@@ -93,7 +95,7 @@ insert into public.listings (
   null,
   'ACTIVE',
   now() - interval '2 hours',
-  now() + interval '4 hours',
+  now() + interval '20 hours',
   ST_SetSRID(ST_MakePoint(-9.1360, 38.7195), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1365, 38.7190), 4326)::geography
 ),
@@ -108,7 +110,7 @@ insert into public.listings (
   null,
   'ACTIVE',
   now() - interval '45 minutes',
-  now() + interval '6 hours',
+  now() + interval '30 hours',
   ST_SetSRID(ST_MakePoint(-9.1400, 38.7220), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1404, 38.7216), 4326)::geography
 ),
@@ -123,7 +125,7 @@ insert into public.listings (
   'Suggested €1',
   'ACTIVE',
   now(),
-  now() + interval '8 hours',
+  now() + interval '48 hours',
   ST_SetSRID(ST_MakePoint(-9.1350, 38.7240), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1355, 38.7235), 4326)::geography
 ),
@@ -138,7 +140,7 @@ insert into public.listings (
   null,
   'ACTIVE',
   now() - interval '3 hours',
-  now() + interval '12 hours',
+  now() + interval '72 hours',
   ST_SetSRID(ST_MakePoint(-9.1425, 38.7200), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1420, 38.7196), 4326)::geography
 ),
@@ -153,7 +155,7 @@ insert into public.listings (
   null,
   'ACTIVE',
   now() - interval '1 hour',
-  now() + interval '3 hours',
+  now() + interval '16 hours',
   ST_SetSRID(ST_MakePoint(-9.1390, 38.7260), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1385, 38.7255), 4326)::geography
 ),
@@ -168,7 +170,7 @@ insert into public.listings (
   null,
   'ACTIVE',
   now(),
-  now() + interval '10 hours',
+  now() + interval '48 hours',
   ST_SetSRID(ST_MakePoint(-9.1450, 38.7215), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1446, 38.7211), 4326)::geography
 ),
@@ -183,7 +185,7 @@ insert into public.listings (
   null,
   'ACTIVE',
   now() - interval '20 minutes',
-  now() + interval '90 minutes',
+  now() + interval '14 hours',
   ST_SetSRID(ST_MakePoint(-9.1370, 38.7228), 4326)::geography,
   ST_SetSRID(ST_MakePoint(-9.1374, 38.7224), 4326)::geography
 );

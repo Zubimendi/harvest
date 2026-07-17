@@ -1,10 +1,13 @@
 import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User as UserIcon, LogOut, Trash2, Bell, MapPin, Moon } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { User as UserIcon, LogOut, Trash2, Bell, MapPin, Moon, ShoppingBag, ChevronRight } from 'lucide-react-native';
+import { useQuery } from '@apollo/client/react';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../lib/auth';
 import { useLocation } from '../../hooks/useLocation';
 import { useTheme } from '../../lib/theme';
+import { MY_RESERVATIONS_QUERY } from '../../lib/graphql/queries';
 
 type AppearanceOption = 'light' | 'dark' | 'system';
 
@@ -15,9 +18,18 @@ const APPEARANCE: { value: AppearanceOption; label: string }[] = [
 ];
 
 export default function ProfileTab() {
+  const router = useRouter();
   const { user, isDemo, signOut } = useAuth();
   const { radiusKm, updateRadius } = useLocation();
   const { theme, setTheme, tokens } = useTheme();
+
+  const { data: reservationsData } = useQuery(MY_RESERVATIONS_QUERY, {
+    fetchPolicy: 'cache-and-network',
+  });
+  const reservations = reservationsData?.myReservations || [];
+  const activeReservations = reservations.filter(
+    (r: { status: string }) => r.status === 'RESERVED',
+  ).length;
 
   const handleSignOut = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -50,6 +62,36 @@ export default function ProfileTab() {
           </Text>
           <View className="mt-4 w-full">
             <Button label="Edit profile" variant="secondary" />
+          </View>
+        </View>
+
+        <View className="pt-6">
+          <Text className="font-display text-xl text-text-primary dark:text-text-primary-dark mb-2 px-4">
+            Activity
+          </Text>
+
+          <View className="bg-surface dark:bg-surface-dark mx-4 rounded-card overflow-hidden border border-border dark:border-border-dark">
+            <TouchableOpacity
+              className="flex-row items-center justify-between p-4"
+              onPress={() => router.push('/reservations')}
+              accessibilityRole="button"
+              accessibilityLabel="Your reservations"
+            >
+              <View className="flex-row items-center flex-1">
+                <ShoppingBag size={20} color={tokens.textSecondary} />
+                <View className="ml-3">
+                  <Text className="font-body text-text-primary dark:text-text-primary-dark">
+                    Your reservations
+                  </Text>
+                  <Text className="font-body text-text-secondary text-xs">
+                    {reservations.length === 0
+                      ? 'Nothing reserved yet'
+                      : `${reservations.length} total • ${activeReservations} to pick up`}
+                  </Text>
+                </View>
+              </View>
+              <ChevronRight size={20} color={tokens.textSecondary} />
+            </TouchableOpacity>
           </View>
         </View>
 

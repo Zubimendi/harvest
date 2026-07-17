@@ -81,6 +81,7 @@ type Query {
   publicProfile(id: ID!): User!
   myConversations: [Conversation!]!
   conversationMessages(conversationId: ID!): [Message!]!
+  myReservations: [Listing!]!
 }
 
 input CreateListingInput {

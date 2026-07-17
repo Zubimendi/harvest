@@ -93,6 +93,11 @@ func Handler(res *resolvers.Resolver) http.HandlerFunc {
 			execErr = err
 			data = map[string]interface{}{"myConversations": convs}
 
+		case "MyReservations":
+			reservations, err := res.MyReservations(ctx)
+			execErr = err
+			data = map[string]interface{}{"myReservations": reservations}
+
 		case "ConversationMessages":
 			id := asString(vars["conversationId"])
 			msgs, err := res.ConversationMessages(ctx, id)
@@ -208,8 +213,9 @@ func writeErr(w http.ResponseWriter, msg string, code int) {
 func detectOperation(query string) string {
 	for _, name := range []string{
 		"NearbyListings", "ListingDetail", "PublicProfile", "MyConversations",
-		"ConversationMessages", "CreateListing", "ReserveListing", "CancelReservation",
-		"ConfirmPickup", "SendMessage", "SubmitReview", "ReportListing", "ReportUser",
+		"MyReservations", "ConversationMessages", "CreateListing", "ReserveListing",
+		"CancelReservation", "ConfirmPickup", "SendMessage", "SubmitReview",
+		"ReportListing", "ReportUser",
 	} {
 		if strings.Contains(query, name) {
 			return name

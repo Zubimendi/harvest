@@ -388,6 +388,63 @@ func (r *Resolver) MyConversations(ctx context.Context) ([]*Conversation, error)
 	return conversations, nil
 }
 
+// MyReservations returns listings the authenticated user has reserved,
+// including completed pickups (reserved_by survives PICKED_UP).
+func (r *Resolver) MyReservations(ctx context.Context) ([]*Listing, error) {
+	userID, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.Pool.Query(ctx, `
+		SELECT
+			l.id, l.title, l.description, l.category, l.photos, l.quantity,
+			l.suggested_donation, l.status, l.pickup_window_start, l.pickup_window_end,
+			ST_Y(l.display_location::geometry), ST_X(l.display_location::geometry),
+			l.created_at, l.updated_at,
+			u.id, u.display_name, u.avatar_url, u.bio, u.is_business,
+			u.rating_sum, u.rating_count, u.created_at
+		FROM public.listings l
+		JOIN public.users u ON l.owner_id = u.id
+		WHERE l.reserved_by = $1
+		ORDER BY l.updated_at DESC
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("myReservations: %w", err)
+	}
+	defer rows.Close()
+
+	listings := []*Listing{}
+	for rows.Next() {
+		l := &Listing{DisplayLocation: Location{}}
+		owner := &User{}
+		var ratingSum, ratingCount int
+		err := rows.Scan(
+			&l.ID, &l.Title, &l.Description, &l.Category, &l.Photos, &l.Quantity,
+			&l.SuggestedDonation, &l.Status, &l.PickupWindowStart, &l.PickupWindowEnd,
+			&l.DisplayLocation.Latitude, &l.DisplayLocation.Longitude,
+			&l.CreatedAt, &l.UpdatedAt,
+			&owner.ID, &owner.DisplayName, &owner.AvatarURL, &owner.Bio, &owner.IsBusiness,
+			&ratingSum, &ratingCount, &owner.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("myReservations scan: %v", err)
+			continue
+		}
+		if ratingCount > 0 {
+			owner.RatingAvg = float64(ratingSum) / float64(ratingCount)
+		}
+		owner.RatingCount = ratingCount
+		l.Owner = owner
+		listings = append(listings, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("myReservations rows: %w", err)
+	}
+
+	return listings, nil
+}
+
 // ConversationMessages returns all messages for a conversation.
 func (r *Resolver) ConversationMessages(ctx context.Context, conversationID string) ([]*Message, error) {
 	userID, err := requireAuth(ctx)

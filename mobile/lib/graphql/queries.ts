@@ -101,6 +101,29 @@ export const MY_CONVERSATIONS_QUERY = gql`
   }
 `;
 
+export const MY_RESERVATIONS_QUERY = gql`
+  query MyReservations {
+    myReservations {
+      id
+      title
+      category
+      photos
+      quantity
+      status
+      pickupWindowEnd
+      updatedAt
+      displayLocation {
+        latitude
+        longitude
+      }
+      owner {
+        id
+        displayName
+      }
+    }
+  }
+`;
+
 export const CONVERSATION_MESSAGES_QUERY = gql`
   query ConversationMessages($conversationId: ID!) {
     conversationMessages(conversationId: $conversationId) {
